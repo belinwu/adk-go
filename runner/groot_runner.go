@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"os"
 	"strings"
 
 	"google.golang.org/adk/agent"
@@ -19,17 +18,24 @@ import (
 	"google.golang.org/genai"
 )
 
-type GRootRunner struct {
+type GRootRunnerConfig struct {
+	GRootEndpoint string
+	GRootAPIKey   string
+
 	AppName        string
 	RootAgent      agent.Agent
 	SessionService sessionservice.Service
+}
+
+type GRootRunner struct {
+	cfg *GRootRunnerConfig
 
 	parents parentmap.Map
 	client  *internal.Client
 }
 
-func NewGRootRunner(endpoint string, appName string, rootAgent agent.Agent) (*GRootRunner, error) {
-	client, err := internal.NewClient(endpoint, os.Getenv("GROOT_KEY"))
+func NewGRootRunner(cfg *GRootRunnerConfig) (*GRootRunner, error) {
+	client, err := internal.NewClient(cfg.GRootEndpoint, cfg.GRootAPIKey)
 	if err != nil {
 		return nil, err
 	}
@@ -41,18 +47,16 @@ func NewGRootRunner(endpoint string, appName string, rootAgent agent.Agent) (*GR
 		return nil, err
 	}
 	return &GRootRunner{
-		AppName:        appName,
-		RootAgent:      rootAgent,
-		SessionService: sessionservice.Mem(),
-		client:         client,
+		cfg:    cfg,
+		client: client,
 	}, nil
 }
 
 func (r *GRootRunner) Run(ctx context.Context, userID, sessionID string, msg *genai.Content, cfg *RunConfig) iter.Seq2[*session.Event, error] {
 	return func(yield func(*session.Event, error) bool) {
-		session, err := r.SessionService.Get(ctx, &sessionservice.GetRequest{
+		session, err := r.cfg.SessionService.Get(ctx, &sessionservice.GetRequest{
 			ID: session.ID{
-				AppName:   r.AppName,
+				AppName:   r.cfg.AppName,
 				UserID:    userID,
 				SessionID: sessionID,
 			},
@@ -81,7 +85,7 @@ func (r *GRootRunner) Run(ctx context.Context, userID, sessionID string, msg *ge
 		})
 
 		ctx := agent.NewContext(ctx, agentToRun, msg, &mutableSession{
-			service:       r.SessionService,
+			service:       r.cfg.SessionService,
 			storedSession: session,
 		}, "")
 
@@ -103,7 +107,7 @@ func (r *GRootRunner) Run(ctx context.Context, userID, sessionID string, msg *ge
 
 				// TODO: update session state & delta
 
-				if err := r.SessionService.AppendEvent(ctx, session, event); err != nil {
+				if err := r.cfg.SessionService.AppendEvent(ctx, session, event); err != nil {
 					yield(nil, fmt.Errorf("failed to add event to session: %w", err))
 					return
 				}
@@ -129,7 +133,7 @@ func (r *GRootRunner) findAgentToRun(session sessionservice.StoredSession) (agen
 			continue
 		}
 
-		subAgent := findAgent(r.RootAgent, event.Author)
+		subAgent := findAgent(r.cfg.RootAgent, event.Author)
 		// Agent not found, continue looking for the other event.
 		if subAgent == nil {
 			log.Printf("Event from an unknown agent: %s, event id: %s", event.Author, event.ID)
@@ -142,7 +146,7 @@ func (r *GRootRunner) findAgentToRun(session sessionservice.StoredSession) (agen
 	}
 
 	// Falls back to root agent if no suitable agents are found in the session.
-	return r.RootAgent, nil
+	return r.cfg.RootAgent, nil
 }
 
 // checks if the agent and its parent chain allow transfer up the tree.
@@ -191,7 +195,7 @@ func (r *GRootRunner) appendMessageToSession(ctx agent.Context, storedSession se
 		Content: msg,
 	}
 
-	if err := r.SessionService.AppendEvent(ctx, storedSession, event); err != nil {
+	if err := r.cfg.SessionService.AppendEvent(ctx, storedSession, event); err != nil {
 		return fmt.Errorf("failed to append event to sessionService: %w", err)
 	}
 	return nil

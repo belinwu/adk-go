@@ -37,7 +37,12 @@ func main() {
 		log.Fatalf("Failed to create agent: %v", err)
 	}
 
-	r, err := runner.NewGRootRunner(endpoint, "hello", agent)
+	r, err := runner.NewGRootRunner(&runner.GRootRunnerConfig{
+		GRootEndpoint: endpoint,
+		GRootAPIKey:   os.Getenv("GROOT_KEY"),
+		AppName:       "hello_world",
+		RootAgent:     agent,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
