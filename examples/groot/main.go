@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/google/uuid"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/llm/gemini"
 	"google.golang.org/adk/runner"
@@ -38,10 +39,11 @@ func main() {
 	}
 
 	r, err := runner.NewGRootRunner(&runner.GRootRunnerConfig{
-		GRootEndpoint: endpoint,
-		GRootAPIKey:   os.Getenv("GROOT_KEY"),
-		AppName:       "hello_world",
-		RootAgent:     agent,
+		GRootEndpoint:  endpoint,
+		GRootAPIKey:    os.Getenv("GROOT_KEY"),
+		GRootSessionID: uuid.NewString(),
+		AppName:        "hello_world",
+		RootAgent:      agent,
 	})
 	if err != nil {
 		log.Fatal(err)

@@ -19,8 +19,9 @@ import (
 )
 
 type GRootRunnerConfig struct {
-	GRootEndpoint string
-	GRootAPIKey   string
+	GRootEndpoint  string
+	GRootAPIKey    string
+	GRootSessionID string
 
 	AppName        string
 	RootAgent      agent.Agent
@@ -39,7 +40,7 @@ func NewGRootRunner(cfg *GRootRunnerConfig) (*GRootRunner, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, err := client.OpenSession("hello123434343434343")
+	sess, err := client.OpenSession(cfg.GRootSessionID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/gorilla/websocket"
@@ -12,7 +13,7 @@ type Client struct {
 
 type Port struct {
 	Name     string `json:"name,omitempty"`
-	StreamID string `json:"stream_id,omitempty"`
+	StreamID string `json:"streamId,omitempty"`
 }
 
 type ActionGraph struct {
@@ -28,21 +29,21 @@ type Action struct {
 }
 
 type Chunk struct {
-	MIMEType string `json:"mime_type,omitempty"`
+	MIMEType string `json:"mimeType,omitempty"`
 	Data     []byte `json:"data,omitempty"`
 	// TODO: Add metadata.
 }
 
 type StreamFrame struct {
-	StreamID  string `json:"stream_id,omitempty"`
+	StreamID  string `json:"streamId,omitempty"`
 	Data      *Chunk `json:"data,omitempty"`
 	Continued bool   `json:"continued,omitempty"`
 }
 
 type executeActionsMsg struct {
-	SessionID    string         `json:"session_id,omitempty"`
-	ActionGraph  *ActionGraph   `json:"action_graph,omitempty"`
-	StreamFrames []*StreamFrame `json:"stream_frames,omitempty"`
+	SessionID    string         `json:"sessionId,omitempty"`
+	ActionGraph  *ActionGraph   `json:"actionGraph,omitempty"`
+	StreamFrames []*StreamFrame `json:"streamFrames,omitempty"`
 }
 
 func NewClient(endpoint string, apiKey string) (*Client, error) {
@@ -59,20 +60,15 @@ type Session struct {
 }
 
 func (c *Client) OpenSession(sessionID string) (*Session, error) {
-	// if err := c.conn.WriteJSON(&startSessionRequest{
-	// 	// ProposedID: proposedID,
-	// }); err != nil {
-	// 	return nil, err
-	// }
-	// var resp startSessionResponse
-	// if err := c.conn.ReadJSON(&resp); err != nil {
-	// 	return nil, err
-	// }
 	// TODO(jbd) Start session for real.
 	return &Session{c: c, sessionID: sessionID}, nil
 }
 
 func (s *Session) ExecuteActions(actions []*Action, outputs []string) error {
+	frames := ([]*StreamFrame{
+		{StreamID: "test", Data: &Chunk{MIMEType: "text/plain", Data: []byte("hello world")}},
+	})
+
 	if err := s.c.conn.WriteJSON(&executeActionsMsg{
 		SessionID: s.sessionID,
 		ActionGraph: &ActionGraph{
@@ -80,21 +76,32 @@ func (s *Session) ExecuteActions(actions []*Action, outputs []string) error {
 				{
 					Name:    "save_stream",
 					Inputs:  []*Port{{Name: "input", StreamID: "test"}},
-					Outputs: []*Port{{Name: "ouput", StreamID: "test1"}},
+					Outputs: []*Port{{Name: "output", StreamID: "save_output"}},
 				},
+				// {
+				// 	Name:    "restore_stream",
+				// 	Outputs: []*Port{{Name: "output", StreamID: "test"}},
+				// },
 			},
-			Outputs: []*Port{{Name: "ouput", StreamID: "test1"}},
+			Outputs: []*Port{{Name: "output", StreamID: "test"}},
 		},
-		StreamFrames: []*StreamFrame{
-			{StreamID: "test", Data: &Chunk{MIMEType: "text/plain", Data: []byte("hello world")}},
-		},
+		StreamFrames: frames,
 	}); err != nil {
 		return err
 	}
-	var resp executeActionsMsg
-	if err := s.c.conn.ReadJSON(&resp); err != nil {
-		return err
+
+	for {
+		var resp executeActionsMsg
+		_, message, err := s.c.conn.ReadMessage()
+		if err != nil {
+			return err
+		}
+		log.Printf("received: %s\n", message)
+		if err := json.Unmarshal(message, &resp); err != nil {
+			return err
+		}
+		log.Println(resp.StreamFrames)
 	}
-	log.Println(resp)
-	panic("not yet")
 }
+
+// func (s *Session) ExecuteADK(name string, inputs)
