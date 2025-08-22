@@ -48,6 +48,9 @@ func NewGRootRunner(cfg *GRootRunnerConfig) (*GRootRunner, error) {
 		log.Println(frame, err)
 	}
 
+	if cfg.SessionService == nil {
+		cfg.SessionService = sessionservice.Mem()
+	}
 	return &GRootRunner{
 		cfg:    cfg,
 		client: client,
