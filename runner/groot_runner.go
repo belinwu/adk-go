@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/google/uuid"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/internal/agent/parentmap"
 	"google.golang.org/adk/internal/agent/runconfig"
@@ -40,12 +41,16 @@ func NewGRootRunner(cfg *GRootRunnerConfig) (*GRootRunner, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, err := client.OpenSession(cfg.GRootSessionID)
-	if err != nil {
-		return nil, err
+
+	if cfg.GRootSessionID == "" {
+		cfg.GRootSessionID = uuid.NewString()
 	}
 	if cfg.SessionService == nil {
 		cfg.SessionService = sessionservice.Mem()
+	}
+	sess, err := client.OpenSession(cfg.GRootSessionID)
+	if err != nil {
+		return nil, err
 	}
 	return &GRootRunner{
 		cfg:     cfg,

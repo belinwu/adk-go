@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/google/uuid"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/llm/gemini"
 	"google.golang.org/adk/runner"
@@ -39,17 +40,36 @@ func main() {
 	}
 
 	r, err := runner.NewGRootRunner(&runner.GRootRunnerConfig{
-		GRootEndpoint:  endpoint,
-		GRootAPIKey:    os.Getenv("GROOT_KEY"),
-		GRootSessionID: uuid.NewString(),
-		AppName:        "hello_world",
-		RootAgent:      agent,
+		GRootEndpoint: endpoint,
+		GRootAPIKey:   os.Getenv("GROOT_KEY"),
+		AppName:       "hello_world",
+		RootAgent:     agent,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	it := r.Run(ctx, "user_1", "session_1", genai.Text("hello, agent, tell me about the weather!")[0], &runner.RunConfig{})
-	for event, err := range it {
-		log.Println(event, err)
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("\nUser -> ")
+
+		userInput, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		userMsg := genai.NewContentFromText(userInput, genai.RoleUser)
+		fmt.Print("\nAgent -> ")
+		for event, err := range r.Run(ctx, "test_user", "test_session", userMsg, &runner.RunConfig{
+			StreamingMode: runner.StreamingModeSSE,
+		}) {
+			if err != nil {
+				fmt.Printf("\nAGENT_ERROR: %v\n", err)
+			} else {
+				for _, p := range event.LLMResponse.Content.Parts {
+					fmt.Print(p.Text)
+				}
+			}
+		}
 	}
 }
