@@ -75,6 +75,7 @@ func main() {
 	llmAuditor := agents.GetLLmAuditorAgent(ctx, apiKey)
 
 	agentLoader := services.NewStaticAgentLoader(
+		rootAgent,
 		map[string]agent.Agent{
 			"weather_time_agent": rootAgent,
 			"llm_auditor":        llmAuditor,
@@ -83,7 +84,7 @@ func main() {
 	artifactservice := artifactservice.Mem()
 
 	config := web.ParseArgs()
-	fmt.Println(config)
+	fmt.Printf("%+v\n", config)
 	web.Serve(config, &web.ServeConfig{
 		SessionService:  sessionService,
 		AgentLoader:     agentLoader,

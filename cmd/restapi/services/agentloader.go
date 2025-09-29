@@ -22,18 +22,25 @@ import (
 )
 
 type AgentLoader interface {
+	Root() agent.Agent
 	ListAgents() []string
 	LoadAgent(string) (agent.Agent, error)
 }
 
 type StaticAgentLoader struct {
+	root   agent.Agent
 	agents map[string]agent.Agent
 }
 
-func NewStaticAgentLoader(agents map[string]agent.Agent) *StaticAgentLoader {
+func NewStaticAgentLoader(root agent.Agent, agents map[string]agent.Agent) *StaticAgentLoader {
 	return &StaticAgentLoader{
+		root:   root,
 		agents: agents,
 	}
+}
+
+func (s *StaticAgentLoader) Root() agent.Agent {
+	return s.root
 }
 
 func (s *StaticAgentLoader) ListAgents() []string {
