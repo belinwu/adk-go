@@ -27,7 +27,7 @@ func toA2AParts(parts []*genai.Part, longRunningToolIDs []string) ([]a2a.Part, e
 		if part.Text != "" {
 			r := a2a.TextPart{Text: part.Text}
 			if part.Thought {
-				r.Metadata = map[string]any{"thought": true}
+				r.Metadata = map[string]any{toMetaKey("thought"): true}
 			}
 			result[i] = r
 		} else if part.InlineData != nil || part.FileData != nil {
@@ -133,7 +133,7 @@ func toA2ADataPart(part *genai.Part, longRunningToolIDs []string) (a2a.DataPart,
 		}, nil
 	}
 
-	return a2a.DataPart{}, fmt.Errorf("cannot convert to DataPart: %v", part)
+	return a2a.DataPart{Data: map[string]any{}}, nil
 }
 
 func toGenAIContent(msg *a2a.Message) (*genai.Content, error) {
@@ -151,7 +151,7 @@ func toGenAIParts(parts []a2a.Part) ([]*genai.Part, error) {
 		case a2a.TextPart:
 			r := genai.NewPartFromText(v.Text)
 			if v.Metadata != nil {
-				if thought, ok := v.Metadata["thought"].(bool); ok {
+				if thought, ok := v.Metadata[toMetaKey("thought")].(bool); ok {
 					r.Thought = thought
 				}
 			}
