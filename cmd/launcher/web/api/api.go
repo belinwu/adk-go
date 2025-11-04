@@ -73,12 +73,6 @@ func (a *apiLauncher) SetupSubrouters(router *mux.Router, adkConfig *adk.Config)
 	return nil
 }
 
-// WrapHandlers implements web.WebSublauncher. For API, it doesn't change the top-level routes.
-func (a *apiLauncher) WrapHandlers(handler http.Handler, adkConfig *adk.Config) http.Handler {
-	// api doesn't change the top level routes
-	return handler
-}
-
 // Keyword returns the keyword for the API launcher.
 func (a *apiLauncher) Keyword() string {
 	return "api"

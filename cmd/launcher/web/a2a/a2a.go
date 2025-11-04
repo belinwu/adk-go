@@ -18,7 +18,6 @@ package a2a
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"net/url"
 
 	a2acore "github.com/a2aproject/a2a-go/a2a"
@@ -71,12 +70,6 @@ func (a *a2aLauncher) Parse(args []string) ([]string, error) {
 	}
 	restArgs := a.flags.Args()
 	return restArgs, nil
-}
-
-// WrapHandlers implements web.WebSublauncher. For API, it doesn't change the top-level routes.
-func (a *a2aLauncher) WrapHandlers(handler http.Handler, adkConfig *adk.Config) http.Handler {
-	// doesn't change the top level routes
-	return handler
 }
 
 // SetupSubrouters implements the web.WebSublauncher interface. It adds A2A paths to the main router.
