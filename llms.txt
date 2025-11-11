@@ -1,4 +1,5 @@
-# ADK for Go: Comprehensive Documentation Summary
+# ADK for Go: Documentation Summary
+# Valid for ADK Go version: v0.1.0
 
 This document provides a detailed summary of the Go Agent Development Kit (ADK), complete with code samples for each major concept.
 
