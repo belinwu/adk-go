@@ -207,6 +207,7 @@ func TestRemoteAgent_ADK2ADK(t *testing.T) {
 		name          string
 		remoteEvents  []*session.Event
 		wantResponses []model.LLMResponse
+		wantEscalate  bool
 	}{
 		{
 			name: "text streaming",
@@ -256,6 +257,20 @@ func TestRemoteAgent_ADK2ADK(t *testing.T) {
 				{TurnComplete: true},
 			},
 		},
+		{
+			name: "escalation",
+			remoteEvents: []*session.Event{
+				{
+					LLMResponse: model.LLMResponse{Content: genai.NewContentFromText("stop", genai.RoleModel)},
+					Actions:     session.EventActions{Escalate: true},
+				},
+			},
+			wantResponses: []model.LLMResponse{
+				{Content: genai.NewContentFromText("stop", genai.RoleModel), Partial: true},
+				{TurnComplete: true},
+			},
+			wantEscalate: true,
+		},
 	}
 
 	ignoreFields := []cmp.Option{
@@ -272,19 +287,24 @@ func TestRemoteAgent_ADK2ADK(t *testing.T) {
 			ictx := newInvocationContext(t, []*session.Event{newUserHello()})
 			gotEvents, err := runAndCollect(ictx, remoteAgent)
 			if err != nil {
-				t.Errorf("agent.Run() error = %v", err)
+				t.Fatalf("agent.Run() error = %v", err)
 			}
 			gotResponses := toLLMResponses(gotEvents)
 			if diff := cmp.Diff(tc.wantResponses, gotResponses, ignoreFields...); diff != "" {
-				t.Errorf("agent.Run() wrong result (+got,-want):\ngot = %+v\nwant = %+v\ndiff = %s", gotResponses, tc.wantResponses, diff)
+				t.Fatalf("agent.Run() wrong result (+got,-want):\ngot = %+v\nwant = %+v\ndiff = %s", gotResponses, tc.wantResponses, diff)
 			}
+			lastEscalate := false
 			for _, event := range gotEvents {
 				if _, ok := event.CustomMetadata[adka2a.ToADKMetaKey("response")]; !ok {
-					t.Errorf("event.CustomMetadata = %v, want meta[%q] = original a2a event", event.CustomMetadata, adka2a.ToADKMetaKey("response"))
+					t.Fatalf("event.CustomMetadata = %v, want meta[%q] = original a2a event", event.CustomMetadata, adka2a.ToADKMetaKey("response"))
 				}
 				if _, ok := event.CustomMetadata[adka2a.ToADKMetaKey("request")]; !ok {
-					t.Errorf("event.CustomMetadata = %v, want meta[%q] = original a2a request", event.CustomMetadata, adka2a.ToADKMetaKey("request"))
+					t.Fatalf("event.CustomMetadata = %v, want meta[%q] = original a2a request", event.CustomMetadata, adka2a.ToADKMetaKey("request"))
 				}
+				lastEscalate = event.Actions.Escalate
+			}
+			if tc.wantEscalate != lastEscalate {
+				t.Fatalf("last event escalate = %v, want %v", lastEscalate, tc.wantEscalate)
 			}
 		})
 	}
